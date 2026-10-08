@@ -20,10 +20,9 @@ export async function proxy(request: NextRequest) {
     },
   );
   const { data } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
-  if (!data.user && path !== "/band/login") {
+  if (!data.user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/band/login";
+    url.pathname = "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }

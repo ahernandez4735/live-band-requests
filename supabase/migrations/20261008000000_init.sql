@@ -464,6 +464,19 @@ create policy queue_owner_read on public.queue_items for select to authenticated
 create policy requests_owner_read on public.requests for select to authenticated using (is_gig_owner(gig_id));
 -- guest_sessions and votes: no client access; the server uses the service role.
 
+-- Explicit grants, so the app works whatever the project's default privileges are.
+-- RLS above still decides which rows each role sees.
+grant usage on schema public to anon, authenticated, service_role;
+grant select on public.bands, public.gigs, public.queue_items to anon;
+grant select, insert, update, delete on public.bands, public.songs, public.cover_artists,
+  public.gigs, public.gig_private, public.gig_song_off to authenticated;
+grant select on public.queue_items, public.requests to authenticated;
+grant all on all tables in schema public to service_role;
+revoke insert, update, delete on public.bands, public.songs, public.cover_artists, public.gigs,
+  public.gig_private, public.gig_song_off, public.queue_items, public.requests, public.votes,
+  public.guest_sessions from anon;
+revoke all on public.votes, public.guest_sessions, public.gig_private from anon;
+
 -- Status changes go through band_set_gig_status so the one-live-gig rule holds.
 revoke update on public.gigs from anon, authenticated;
 grant update (name, starts_at, ends_at, requests_open, shoutouts_enabled) on public.gigs to authenticated;
@@ -477,6 +490,14 @@ revoke execute on function public.band_next(uuid) from public, anon;
 revoke execute on function public.band_set_item(uuid, text) from public, anon;
 revoke execute on function public.band_shoutout(uuid, boolean) from public, anon;
 revoke execute on function public.band_set_gig_status(uuid, public.gig_status) from public, anon;
+
+grant execute on function public.normalize_text(text), public.is_band_owner(uuid), public.is_gig_owner(uuid),
+  public.is_live_gig(uuid), public.item_gig(uuid) to anon, authenticated, service_role;
+grant execute on function public.lock_owned_gig(uuid), public.band_play(uuid), public.band_next(uuid),
+  public.band_set_item(uuid, text), public.band_shoutout(uuid, boolean),
+  public.band_set_gig_status(uuid, public.gig_status) to authenticated;
+grant execute on function public.guest_request(uuid, uuid, uuid, text, text, text, text),
+  public.guest_vote(uuid, uuid, uuid, integer), public.start_item(uuid, uuid) to service_role;
 
 -- Realtime: guests and band dashboards subscribe to these.
 do $$

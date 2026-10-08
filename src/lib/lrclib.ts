@@ -25,6 +25,8 @@ export async function findLyrics(title: string, artist: string): Promise<Lyrics 
     res = await fetch(`https://lrclib.net/api/search?${params}`, {
       headers: { "User-Agent": USER_AGENT },
       signal: AbortSignal.timeout(8000),
+      // Lyrics rarely change; cache lookups for a day so guests polling the Lyrics tab don't refetch.
+      next: { revalidate: 86400 },
     });
   } catch {
     return null;

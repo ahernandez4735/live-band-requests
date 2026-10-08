@@ -134,8 +134,13 @@ reset role;
 set role anon;
 do $$ begin
   if (select count(*) from queue_items) = 0 then raise exception 'anon cannot read live queue'; end if;
-  if (select count(*) from requests) <> 0 then raise exception 'anon can read requests'; end if;
-  if (select count(*) from gig_private) <> 0 then raise exception 'anon can read gig_private'; end if;
+  -- Guest names and venue locations: either no grant at all or no visible rows.
+  begin
+    if (select count(*) from requests) <> 0 then raise exception 'anon can read requests'; end if;
+  exception when insufficient_privilege then null; end;
+  begin
+    if (select count(*) from gig_private) <> 0 then raise exception 'anon can read gig_private'; end if;
+  exception when insufficient_privilege then null; end;
   begin
     perform guest_vote('30000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001',
       (select id from queue_items limit 1), 1);
